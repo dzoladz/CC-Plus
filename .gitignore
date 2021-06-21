@@ -19,3 +19,7 @@ yarn.lock
 composer.lock
 package-lock.json
 .DS_Store
+
+.idea
+docker/certs/*
+!docker/certs/.gitkeep

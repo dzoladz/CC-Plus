@@ -1,0 +1,93 @@
+# -------------------------------------------------------------------------------------------------------------
+# ❤️ Use Compose Spec: https://www.compose-spec.io/ ❤️
+#
+# This file builds a containerized instance of CC-Plus behind Traefik as a reverse proxy. CC-Plus image is built
+# locally, The images for Traefik is pulled from the respective authorities on Docker Hub. The configuration and
+# user database is bind-mounted to the project root's data directory
+# -------------------------------------------------------------------------------------------------------------
+
+#----------------------------------------------------
+# ESTABLISH GATEWAY FOR NETWORK TRAFFIC TRAEFIK
+#----------------------------------------------------
+networks:
+  gateway:
+    external: true
+
+#----------------------------------------------------
+# USE DOCKER VOLUMES TO PERSIST DATA
+#----------------------------------------------------
+volumes:
+  db:
+    driver: local
+  reports:
+    driver: local
+
+#----------------------------------------------------
+# [STACK]
+#
+# Traefik - SSL Termination and Routing
+# CC-Plus - Multiservice Application Container
+#----------------------------------------------------
+services:
+  traefik:
+    image: traefik:v2.3.6
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      # ***** Traefik Settings *****
+      #------------------------------------------------------#
+      # API Settings - https://docs.traefik.io/operations/api/
+      #------------------------------------------------------#
+      ##- --api.insecure=true # ONLY FOR DEV ENVIRONMENT!
+      - --api.dashboard=true # Enable dashboard
+      - --api.debug=true # Enable debugging and profiling
+      - --log.level=DEBUG # Set log level
+      #------------------------------------------------------------------------------------#
+      # Provider Settings - https://docs.traefik.io/providers/docker/#provider-configuration
+      #------------------------------------------------------------------------------------#
+      - --providers.docker=true # Enable docker provider
+      - --providers.docker.exposedbydefault=false # Don't expose all containers, only enabled ones
+      - --providers.file.filename=/dynamic.yml # Dynamic configuration file
+      - --providers.docker.network=gateway # Default docker network to use for connections to all containers
+      #------------------------------------------------------------------------------------#
+      # Entrypoints Settings - https://docs.traefik.io/routing/entrypoints/#configuration
+      #------------------------------------------------------------------------------------#
+      - --entrypoints.http.address=:80 # Name entrypoint for port 80 as http
+      - --entrypoints.https.address=:443 # Name entrypoint for port 443 as https
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro" # Read-only Socket
+      - ./certs:/certs # Certificates in acme.json
+      - ./dynamic.yml:/dynamic.yml # Middleware definitions (Auth, HTTPS Redirect)
+    labels:
+    #--------------------------------------------------------------------#
+    # Traefik uses labels to define the behavior and rules of containers #
+    #--------------------------------------------------------------------#
+      - "traefik.enable=true" # Enable traefik on this container
+      - "traefik.http.routers.api.service=api@internal" # Enable traefik api service
+      - "traefik.http.routers.api.entrypoints=http" # Enable HTTP entrypoint for [api]
+      - "traefik.http.routers.api.rule=Host(`traefik.derekzoladz.com`)" # Define HTTP host
+      #- "traefik.http.routers.api.middlewares=auth@file" # Enable authentication. admin:encrypted_password
+      - "traefik.http.middlewares.redirect.redirectscheme.scheme=https"
+    networks:
+      - gateway
+
+  ccplus:
+    image: dzoladz/ccplus:latest
+    restart: unless-stopped
+    volumes:
+      - reports:/usr/local/stats_reports
+      - db:/var/lib/mysql
+    labels:
+    #--------------------------------------------------------------------#
+    # Define the behavior and rules of CC-Plus w/ Traefik                #
+    #--------------------------------------------------------------------#
+      - "traefik.enable=true" # Enable traefik on this container
+      - "traefik.http.routers.ccplus.entrypoints=http" # Enable HTTP entrypoint for [ccplus]
+      - "traefik.http.routers.ccplus.rule=Host(`ccplus.derekzoladz.com`)" # Define HTTP host
+      - "traefik.http.routers.ccplus.middlewares=redirect" # Enforce HTTPS redirect
+      - "traefik.http.routers.ccplus-ssl.entrypoints=https" # Enable HTTPS entrypoint for [ccplus-ssl]
+      - "traefik.http.routers.ccplus-ssl.rule=Host(`ccplus.derekzoladz.com`)" # Define HTTPS host
+      - "traefik.http.routers.ccplus-ssl.tls=true"
+    networks:
+      - gateway
