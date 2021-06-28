@@ -55,6 +55,21 @@ services:
       #------------------------------------------------------------------------------------#
       - --entrypoints.http.address=:80 # Name entrypoint for port 80 as http
       - --entrypoints.https.address=:443 # Name entrypoint for port 443 as https
+      #------------------------------------------------------------------------------------#
+      # Certificate Settings -  https://docs.traefik.io/https/acme/#configuration-examples
+      # --------------------
+      # To enable Let's Encrypt, uncomment the appropriate three hashed (i.e. ###) lines
+      # in this docker-compose.yml file, update the acme.email address for issued certs,
+      # and ensure a valid DNS A record exists, pointing back to this server's IP, for
+      # any HTTPS hosts routed through Traefik. HTTP-01 challenges check for the existence
+      # of this A record before certificate issuance.
+      #------------------------------------------------------------------------------------#
+      ###- --certificatesresolvers.letsencrypt.acme.email=derek@derekzoladz.com # Email for certs
+      ###- --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      ###- --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http
+      ###- --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json # Define certificate store
+      #---   BELOW IS THE STAGING SERVER. Comment out for production, rate limits apply ---
+      ###- --certificatesresolvers.letsencrypt.acme.caServer=https://acme-staging-v02.api.letsencrypt.org/directory
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro" # Read-only Socket
       - ./certs:/certs # Certificates in acme.json
@@ -88,6 +103,7 @@ services:
       - "traefik.http.routers.ccplus.middlewares=redirect" # Enforce HTTPS redirect
       - "traefik.http.routers.ccplus-ssl.entrypoints=https" # Enable HTTPS entrypoint for [ccplus-ssl]
       - "traefik.http.routers.ccplus-ssl.rule=Host(`ccplus.derekzoladz.com`)" # Define HTTPS host
+      ###- "traefik.http.routers.ccplus-ssl.tls.certresolver=letsencrypt" # Use Let's Encrypt
       - "traefik.http.routers.ccplus-ssl.tls=true"
     networks:
       - gateway
