@@ -74,3 +74,4 @@ Data is persisted between restarts using Docker Volumes.
 - all usernames and passwords are hardcoded into the scripts, use variables
 - domain names are hardcoded into the scripts, use variables
 - reduce image size
+- [Finding SUSHI Credentials](https://libraryguides.centennialcollege.ca/SUSHIsetup)
