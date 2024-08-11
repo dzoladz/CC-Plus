@@ -1,0 +1,1 @@
+The installation instructions have moved. Please go to [https://palcilibraries.github.io/CC-Plus/](https://palcilibraries.github.io/CC-Plus/) for installation and user documentation.

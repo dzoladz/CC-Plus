@@ -1,0 +1,14 @@
+# Middleware for Redirect to HTTPS
+http:
+  middlewares:
+    redirect:
+      redirectScheme:
+        scheme: https
+
+# Middleware for Authentication
+http:
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$AJ7MAKzL$/TZYHZWKpNJE3m.W4otyc."
